@@ -9,13 +9,16 @@
 <body>
     <textarea id="chat-log" cols="100" rows="20"></textarea><br/>
     <input id="chat-message-input" type="text" size="100"/><br/>
-    <input id="chat-message-submit" type="button" value="Send"/>
+    <div>
+        <input id="chat-message-submit" type="button" value="Send"/>
+        <input id="chat-disconnect" type="button" value="Disconnect"/>
+    </div>
 </body>
 
 <script>
     var roomName = {{ room_name_json }};
     var user_id = {{ user_id }};
-    alert("your id is " + user_id);
+    var disconnect_message = "상대방과의 연결이 종료되었습니다.";
 
     var chatSocket = new WebSocket(
         'ws://' + window.location.host +
@@ -25,14 +28,21 @@
         var data = JSON.parse(e.data);
         var message = data['message'];
         var cur_user_id = data['user_id'];
+        var chat_log = document.querySelector('#chat-log');
         
-        var name_tag = "unknown";
-        if(user_id == cur_user_id)
-            name_tag = "Me";
-        else
-            name_tag = "Stranger";
-    
-        document.querySelector('#chat-log').value += ('['+ name_tag +']\t' + message + '\n');
+        if(cur_user_id == -1) {
+            chatSocket.close();
+            chat_log.value += disconnect_message;
+        }
+        else {
+            var name_tag = "unknown";
+            if(user_id == cur_user_id)
+                name_tag = "Me";
+            else
+                name_tag = "Stranger";
+        
+            chat_log.value += ('['+ name_tag +']\t' + message + '\n');
+        }        
     };
 
     chatSocket.onclose = function(e) {
@@ -55,6 +65,14 @@
         }));
 
         messageInputDom.value = '';
+    };
+
+    document.querySelector('#chat-disconnect').onclick = function(e) {
+        var messageInputDom = document.querySelector('#chat-log');
+        chatSocket.send(JSON.stringify({
+            'message': disconnect_message,
+            'user_id': -1,
+        }))
     };
 </script>
 
